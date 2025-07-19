@@ -143,7 +143,64 @@ async function listEvents(auth) {
   }
 }
 
-export { authorize, listEvents };
+async function createEvent(auth, eventDetails) {
+  const calendar = google.calendar({ version: "v3", auth });
+  
+  // Parse event details
+  const { title, date, time, duration, description } = eventDetails;
+  
+  let event = {
+    summary: title || "New Event",
+    description: description || "",
+  };
+  
+  // Handle date/time
+  if (time) {
+    // Timed event
+    const startDateTime = new Date(`${date} ${time}`);
+    const endDateTime = new Date(startDateTime);
+    
+    // Default duration is 1 hour if not specified
+    const durationHours = duration || 1;
+    endDateTime.setHours(endDateTime.getHours() + durationHours);
+    
+    event.start = {
+      dateTime: startDateTime.toISOString(),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    event.end = {
+      dateTime: endDateTime.toISOString(),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+  } else {
+    // All-day event
+    const eventDate = new Date(date);
+    const nextDay = new Date(eventDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    event.start = {
+      date: eventDate.toISOString().split('T')[0],
+    };
+    event.end = {
+      date: nextDay.toISOString().split('T')[0],
+    };
+  }
+  
+  try {
+    const response = await calendar.events.insert({
+      calendarId: "primary",
+      resource: event,
+    });
+    
+    console.log("Event created:", response.data);
+    return `Event "${event.summary}" has been added to your calendar on ${date}${time ? ` at ${time}` : ' (all day)'}`;
+  } catch (error) {
+    console.error("Error creating event:", error);
+    throw error;
+  }
+}
+
+export { authorize, listEvents, createEvent };
 
 // Only run if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {

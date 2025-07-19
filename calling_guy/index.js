@@ -64,7 +64,10 @@ async function createCall(number, prompt) {
       // customer: { number: cleanedNumber },
       assistant: {
         model: {
-          toolIds: ["1e3bbdb6-820a-4564-9b6c-b90dc2496bc3"],
+          toolIds: [
+            "1e3bbdb6-820a-4564-9b6c-b90dc2496bc3",
+            "517fb549-9f3f-48e2-96b7-382a0dbb34a4",
+          ],
           provider: "anthropic",
           model: "claude-sonnet-4-20250514",
           messages: [
@@ -101,8 +104,11 @@ app.post("/webhook", async (req, res) => {
 
   // Handle tool calls - check both possible message locations
   const message = event.message || event;
-  
-  if (message.type === "tool-calls" || (message.toolCallList && message.toolCallList.length > 0)) {
+
+  if (
+    message.type === "tool-calls" ||
+    (message.toolCallList && message.toolCallList.length > 0)
+  ) {
     const toolCallList = message.toolCallList || [];
     const results = [];
 
@@ -110,17 +116,17 @@ app.post("/webhook", async (req, res) => {
 
     for (const toolCall of toolCallList) {
       console.log("Processing tool call:", toolCall);
-      
+
       // Check for the tool name in different possible locations
       const toolName = toolCall.name || toolCall.function?.name;
-      
+
       if (toolName === "list_events") {
         try {
           // Import and use the Google Calendar functionality
           const { authorize, listEvents } = await import("./get_events.js");
           const auth = await authorize();
           const events = await listEvents(auth);
-          
+
           console.log("Calendar events retrieved:", events);
 
           results.push({
@@ -133,6 +139,31 @@ app.post("/webhook", async (req, res) => {
             toolCallId: toolCall.id,
             result:
               "Sorry, I couldn't retrieve your calendar events right now.",
+          });
+        }
+      } else if (toolName === "create_event") {
+        try {
+          // Import and use the Google Calendar functionality
+          const { authorize, createEvent } = await import("./get_events.js");
+          const auth = await authorize();
+
+          // Get event details from tool call arguments
+          const eventDetails = toolCall.arguments || toolCall.function?.arguments || {};
+          console.log("Creating event with details:", eventDetails);
+
+          const result = await createEvent(auth, eventDetails);
+          console.log("Event creation result:", result);
+
+          results.push({
+            toolCallId: toolCall.id,
+            result: result,
+          });
+        } catch (error) {
+          console.error("Error creating calendar event:", error);
+          results.push({
+            toolCallId: toolCall.id,
+            result:
+              "Sorry, I couldn't create the calendar event. Please check the event details and try again.",
           });
         }
       }

@@ -143,6 +143,8 @@ IMPORTANT INSTRUCTIONS:
 - If they ask for ${userName}'s name, say "${userName}" but do not give out the phone number unless they ask for it directly.
 - You have access to the ${userName}'s google calendar, use this tool to check if certain times are okay for ${userName}. Before confirming any appointment ever consult the calendar.
 
+- You also have access to a tool that can add to the calendar, so if you book an appointment, make sure to add it to the calendar.
+
 When the conversation starts, let them know you're calling about ${userName}'s request and what specifically you need help with.`;
 }
 
