@@ -1,57 +1,46 @@
 from openai import OpenAI
-import json
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
-import re
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class BusinessResult(BaseModel):
     name: str
     address: str
     phone: str
     agentReasoning: str
-    rating: Optional[float]
-    website: Optional[str]
+    rating: Optional[float] = None
+    website: Optional[str] = None
+
+class BusinessSearchResults(BaseModel):
+    businesses: List[BusinessResult]
 
 client = OpenAI()
 
 def openai_websearch_places(search_query: str, city: str, province: str, country: str = "CA"): 
-  completion = client.chat.completions.create(
-      model="gpt-4o-search-preview",
-      web_search_options={
-          "user_location": {
-              "type": "approximate",
-              "approximate": {
-                  "country": country,
-                  "city": city,
-                  "region": province,
-              }
-          },
-      },
-      messages=[{
-          "role": "user",
-          "content": (
-              f"{search_query}"
-              "Return the result as JSON array with this schema. In agentReasoning, provide a reason why this business was selected."
-              "[{name: string, address: string, phone: string, agentReasoning: string, rating: float (optional), website: string (optional)}]"
-          )
-      }],
-  )
+    completion = client.chat.completions.parse(
+        model="gpt-4o-2024-08-06",
+        messages=[{
+            "role": "user", 
+            "content": (
+                f"Search for businesses that match this request: {search_query} "
+                f"in {city}, {province}, {country}. "
+                "Find real businesses with accurate contact information. "
+                "In agentReasoning, explain why each business was selected and how it matches the request."
+            )
+        }],
+        response_format=BusinessSearchResults
+    )
 
-  # Parse and validate the structured JSON response
-  response = completion.choices[0].message.content
-  pattern = r"\[\s*\{.*?\}\s*(,\s*\{.*?\}\s*)*\]"
-  match = re.search(pattern, response, re.DOTALL)
-
-  validated = []
-
-  if match: 
-    places = json.loads(match.group(0))
-    for place in places: 
-      try: 
-        if place.get("name") and place.get("address") and place.get("phone"):
-            validated.append(BusinessResult(**place).model_dump())
-      except Exception as e:
-        print(f"Error validating place: {place}. Error: {e}")
-  
-  return validated
+    # The parsed response is guaranteed to match our schema
+    result = completion.choices[0].message.parsed
+    
+    if result and result.businesses:
+        # Convert to list of dicts for compatibility with existing code
+        return [business.model_dump() for business in result.businesses]
+    
+    return []
 

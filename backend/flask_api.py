@@ -4,6 +4,11 @@ import uuid
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_cors import CORS, cross_origin
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
