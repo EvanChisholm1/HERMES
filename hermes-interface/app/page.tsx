@@ -10,6 +10,7 @@ import { BusinessResult, CallResult, UserSettings } from "@/types/types";
 import { CallResults } from "@/components/CallResults";
 import { searchPlaces, makeCall } from "@/services/api";
 import { getUserSettings } from "@/utils/userSettings";
+import { useRef } from "react";
 
 const mockResults: BusinessResult[] = [
   {
@@ -79,6 +80,7 @@ export default function HermesInterface() {
   const [callResult, setCallResult] = useState<CallResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings>(() => getUserSettings());
+  const wsRef = useRef<WebSocket | null>(null);
 
   const handleExecute = async () => {
     if (!query.trim()) return;
@@ -131,26 +133,17 @@ export default function HermesInterface() {
       setCallTranscript((prev) => [...prev, "Call initiated successfully", "AI agent is now speaking with " + business.name]);
       
       // Simulate some call progress for demo
-      const transcript = [
-        "Agent is introducing themselves...",
-        "Explaining your request to the business...",
-        "Getting information and availability...",
-        "Call in progress - this may take a few minutes",
-      ];
+      // const transcript = [
+      //   "Agent is introducing themselves...",
+      //   "Explaining your request to the business...",
+      //   "Getting information and availability...",
+      //   "Call in progress - this may take a few minutes",
+      // ];
 
-      for (let i = 0; i < transcript.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        setCallTranscript((prev) => [...prev, transcript[i]]);
-      }
-
-      // For now, still end with mock results until we get real call completion data
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setCallTranscript((prev) => [...prev, "Call completed - processing results..."]);
-      
-      setIsOnCall(false);
-      setCallResult(mockCallResult);
-      setShowCallResults(true);
-      
+      // for (let i = 0; i < transcript.length; i++) {
+      //   await new Promise((resolve) => setTimeout(resolve, 3000));
+      //   setCallTranscript((prev) => [...prev, transcript[i]]);
+      // }
     } catch (error) {
       console.error('Failed to initiate call:', error);
       setError("Failed to initiate call. Please try again.");
@@ -225,6 +218,41 @@ export default function HermesInterface() {
       }, 1000);
     }
     return () => clearInterval(interval);
+  }, [isOnCall]);
+
+  useEffect(() => {
+    if (!isOnCall) return;
+    // Connect to WebSocket server
+    // const ws = new window.WebSocket("ws://localhost:3001/vapi-event");
+    const ws = new window.WebSocket("ws://localhost:3001/vapi-event");
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "agent_spoke" || data.type === "user_spoke") {
+          setCallTranscript((prev) => [...prev, data.text || JSON.stringify(data)]);
+        }
+
+        if (data.type === 'call_ended') { 
+          console.log("Call ended"); 
+          setCallTranscript((prev) => [...prev, "Call completed - processing results..."]);
+          setIsOnCall(false);
+          setCallResult(mockCallResult);
+          setShowCallResults(true);
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    };
+
+    ws.onclose = () => {
+      wsRef.current = null;
+    };
+
+    return () => {
+      ws.close();
+    };
   }, [isOnCall]);
 
   const formatDuration = (seconds: number) => {

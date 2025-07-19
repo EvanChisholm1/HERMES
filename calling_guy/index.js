@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { VapiClient } from "@vapi-ai/server-sdk";
 import { config } from "dotenv";
+import { WebSocketServer } from "ws";
 
 config();
 const app = express();
@@ -57,8 +58,9 @@ async function createCall(number, prompt) {
   console.log(`calling ${cleanedNumber} with prompt: ${prompt}`);
   try {
     const call = await vapi.calls.create({
-      phoneNumberId: "49255788-8d8a-47e2-8e0a-c055b1419b09",
+      phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // Replace with your phone number ID
       customer: { number: "+17056060865" },
+      // customer: { number: "+14375395360"}, 
       // customer: { number: cleanedNumber },
       assistant: {
         model: {
@@ -71,7 +73,7 @@ async function createCall(number, prompt) {
             },
           ],
         },
-      },
+      }
     });
   } catch (error) {
     console.error("Error creating call:", error);
@@ -90,8 +92,34 @@ app.post("/call", async (req, res) => {
   res.status(200).send("Call created successfully");
 });
 
-app.listen(3001, () => {
+// WebSocket server setup
+const server = app.listen(3001, () => {
   console.log("Server is running on port 3001");
+});
+
+// Keep track of all connected clients
+const clients = new Set();
+const wss = new WebSocketServer({ server, path: "/vapi-event" });
+wss.on("connection", (ws) => {
+  clients.add(ws);
+  ws.on("close", () => {
+    clients.delete(ws);
+  });
+});
+
+function broadcastEvent(event) {
+  const data = JSON.stringify(event);
+  for (const ws of clients) {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(data);
+    }
+  }
+}
+
+app.post('/vapi/webhook', (req, res) => {
+  const event = req.body;
+  broadcastEvent(event); // emits via WebSocket
+  res.status(200).send('ok');
 });
 
 // const ex = `
