@@ -9,29 +9,41 @@ export default function PhoneCallInterface() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 
   const handleSearch = async () => {
     if (!query.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/research-places/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal: query }),
-      });
+      // const response = await fetch(`${API_BASE_URL}/search/`, {
+      //   method: 'POST',
+      //   mode: 'no-cors',
+      //   headers: { 'Content-Type': 'application/json',  
+      //               'Accept': 'application/json', 
+      //            },
+      //   body: JSON.stringify({ goal: query }),
+      // });
+
+      const response = await fetch(`${API_BASE_URL}/search`, {
+        method: 'POST', 
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ goal: query })
+      })
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
       const data = await response.json();
-      if (!data || !Array.isArray(data.results)) {
+      if (!data || !Array.isArray(data)) {
         throw new Error('Invalid response format');
       }
 
-      setResults(data.results);
+      setResults(data);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to fetch call targets. Please try again.');

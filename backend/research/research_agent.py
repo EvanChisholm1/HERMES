@@ -4,16 +4,17 @@ from typing import Optional
 from pydantic import BaseModel
 import re
 
-class Place(BaseModel):
+class BusinessResult(BaseModel):
     name: str
     address: str
     phone: str
+    agentReasoning: str
     rating: Optional[float]
     website: Optional[str]
 
 client = OpenAI()
 
-def openai_websearch_places(city: str, province: str, country: str = "CA"): 
+def openai_websearch_places(search_query: str, city: str, province: str, country: str = "CA"): 
   completion = client.chat.completions.create(
       model="gpt-4o-search-preview",
       web_search_options={
@@ -29,9 +30,9 @@ def openai_websearch_places(city: str, province: str, country: str = "CA"):
       messages=[{
           "role": "user",
           "content": (
-              "What are the 3 best places to get a haircut in Collingwood, Ontario? "
-              "Return the result as JSON array with this schema: "
-              "[{name: string, address: string, phone: string, rating: float (optional), website: string (optional)}]"
+              f"{search_query}"
+              "Return the result as JSON array with this schema. In agentReasoning, provide a reason why this business was selected."
+              "[{name: string, address: string, phone: string, agentReasoning: string, rating: float (optional), website: string (optional)}]"
           )
       }],
   )
@@ -48,7 +49,7 @@ def openai_websearch_places(city: str, province: str, country: str = "CA"):
     for place in places: 
       try: 
         if place.get("name") and place.get("address") and place.get("phone"):
-            validated.append(Place(**place).model_dump())
+            validated.append(BusinessResult(**place).model_dump())
       except Exception as e:
         print(f"Error validating place: {place}. Error: {e}")
   
