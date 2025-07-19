@@ -60,10 +60,11 @@ async function createCall(number, prompt) {
     const call = await vapi.calls.create({
       phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // Replace with your phone number ID
       customer: { number: "+17056060865" },
-      // customer: { number: "+14375395360"}, 
+      // customer: { number: "+14375395360"},
       // customer: { number: cleanedNumber },
       assistant: {
         model: {
+          toolIds: ["1e3bbdb6-820a-4564-9b6c-b90dc2496bc3"],
           provider: "openai",
           model: "gpt-4o",
           messages: [
@@ -73,8 +74,10 @@ async function createCall(number, prompt) {
             },
           ],
         },
-      }
+      },
     });
+
+    console.log(call.id);
   } catch (error) {
     console.error("Error creating call:", error);
     throw error; // Re-throw the error to handle it in the route
@@ -90,6 +93,11 @@ app.post("/call", async (req, res) => {
 
   await createCall(cleanupPhoneNumber(number), prompt);
   res.status(200).send("Call created successfully");
+});
+
+app.post("/webhook", (req, res) => {
+  const event = req.body;
+  console.log("Webhook event received:", event);
 });
 
 // WebSocket server setup
@@ -116,10 +124,10 @@ function broadcastEvent(event) {
   }
 }
 
-app.post('/vapi/webhook', (req, res) => {
+app.post("/vapi/webhook", (req, res) => {
   const event = req.body;
   broadcastEvent(event); // emits via WebSocket
-  res.status(200).send('ok');
+  res.status(200).send("ok");
 });
 
 // const ex = `
