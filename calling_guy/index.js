@@ -17,6 +17,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+console.log("VAPI_KEY:", process.env.VAPI_KEY);
 const vapi = new VapiClient({
   token: process.env.VAPI_KEY,
 });
