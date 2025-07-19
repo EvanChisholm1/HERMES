@@ -153,15 +153,21 @@ export function ResultsSelection({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-gray-500" />
-                        <span className="truncate">{business.address}</span>
-                      </div>
+                      {business.address && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-gray-500" />
+                          <span className="truncate">{business.address}</span>
+                        </div>
+                      )}
 
-                      <div className="flex items-center gap-2">
-                        <Star className="h-3.5 w-3.5 text-gray-500" />
-                        <span>{business.rating} rating</span>
-                      </div>
+                      {business.rating ? (
+                        <div className="flex items-center gap-2">
+                          <Star className="h-3.5 w-3.5 text-gray-500" />
+                          <span>{business.rating} rating</span>
+                        </div>
+                      ) : (
+                        ""
+                      )}
                     </div>
                   </div>
 

@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
 import { VapiClient } from "@vapi-ai/server-sdk";
+import { config } from "dotenv";
 
+config();
 const app = express();
 
 // Configure CORS
@@ -16,8 +18,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 const vapi = new VapiClient({
-  // token: "3f0a9f77-2a6a-49c1-b082-69122e73e97a",
-  token: "787cc29a-758e-4ea3-978b-350ab82f48bd",
+  token: process.env.VAPI_KEY,
 });
 
 // const systemPrompt = `
