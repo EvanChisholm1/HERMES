@@ -6,9 +6,10 @@ import { useState, useEffect } from "react";
 import { MainHomepage } from "@/components/MainHomepage";
 import { ResultsSelection } from "@/components/ResultsSelection";
 import { ActiveCall } from "@/components/ActiveCall";
-import { BusinessResult, CallResult } from "@/types/types";
+import { BusinessResult, CallResult, UserSettings } from "@/types/types";
 import { CallResults } from "@/components/CallResults";
-import { searchPlaces } from "@/services/api";
+import { searchPlaces, makeCall } from "@/services/api";
+import { getUserSettings } from "@/utils/userSettings";
 
 const mockResults: BusinessResult[] = [
   {
@@ -77,6 +78,7 @@ export default function HermesInterface() {
   const [showCallResults, setShowCallResults] = useState(false);
   const [callResult, setCallResult] = useState<CallResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings>(() => getUserSettings());
 
   const handleExecute = async () => {
     if (!query.trim()) return;
@@ -116,33 +118,51 @@ export default function HermesInterface() {
     setShowResults(false);
     setCallDuration(0);
     setCallTranscript([]);
+    setError(null);
 
-    // Simulate call progression
-    const transcript = [
-      "Dialing " + business.name + "...",
-      "Call connected",
-      "Agent: Hi, I'd like to place an order for delivery",
-      "Restaurant: What can I get for you?",
-      "Agent: I'd like a large pepperoni pizza",
-      "Restaurant: Perfect! Can I get your delivery address?",
-      "Agent: Yes, it's 123 Your Street",
-      "Restaurant: Great! Your total is $21.99. How would you like to pay?",
-      "Agent: I'll pay with the card on file",
-      "Restaurant: Perfect! Your order will be ready in 35-45 minutes",
-      "Agent: Thank you! Have a great evening",
-      "Call completed successfully",
-    ];
+    try {
+      // Add initial status
+      setCallTranscript(["Initiating call to " + business.name + "..."]);
+      
+      // Make the actual call using the calling service
+      await makeCall(business, query, userSettings.name, userSettings.phone, userSettings.address);
+      
+      // Update transcript to show call was initiated
+      setCallTranscript((prev) => [...prev, "Call initiated successfully", "AI agent is now speaking with " + business.name]);
+      
+      // Simulate some call progress for demo
+      const transcript = [
+        "Agent is introducing themselves...",
+        "Explaining your request to the business...",
+        "Getting information and availability...",
+        "Call in progress - this may take a few minutes",
+      ];
 
-    for (let i = 0; i < transcript.length; i++) {
+      for (let i = 0; i < transcript.length; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        setCallTranscript((prev) => [...prev, transcript[i]]);
+      }
+
+      // For now, still end with mock results until we get real call completion data
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      setCallTranscript((prev) => [...prev, transcript[i]]);
+      setCallTranscript((prev) => [...prev, "Call completed - processing results..."]);
+      
+      setIsOnCall(false);
+      setCallResult(mockCallResult);
+      setShowCallResults(true);
+      
+    } catch (error) {
+      console.error('Failed to initiate call:', error);
+      setError("Failed to initiate call. Please try again.");
+      setCallTranscript((prev) => [...prev, "Error: Failed to initiate call"]);
+      
+      // Fall back to mock behavior
+      setTimeout(() => {
+        setIsOnCall(false);
+        setCallResult(mockCallResult);
+        setShowCallResults(true);
+      }, 2000);
     }
-
-    // End call and show results
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsOnCall(false);
-    setCallResult(mockCallResult);
-    setShowCallResults(true);
   };
 
   const handleYoloMode = async () => {
@@ -190,6 +210,10 @@ export default function HermesInterface() {
     setCallResult(null);
     setCurrentBusiness(null);
     setError(null);
+  };
+
+  const handleUserSettingsChange = (newSettings: UserSettings) => {
+    setUserSettings(newSettings);
   };
 
   // Call duration timer
@@ -260,6 +284,7 @@ export default function HermesInterface() {
       handleSuggestionClick={handleSuggestionClick}
       isProcessing={isProcessing}
       handleKeyPress={handleKeyPress}
+      onUserSettingsChange={handleUserSettingsChange}
     />
   );
 }

@@ -75,6 +75,18 @@ export function ResultsSelection({
           </div>
         )}
 
+        {/* Mock Mode Indicator */}
+        {process.env.NEXT_PUBLIC_USE_MOCK_SEARCH === "true" && (
+          <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-700 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 bg-yellow-400 rounded-full"></div>
+              <span className="text-yellow-200 text-sm font-medium">
+                Mock Mode Active - Using test data (no API costs)
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Agent Analysis */}
         <div className="mb-8 p-6 bg-gray-900/50 border border-gray-800 rounded-lg">
           <div className="flex items-start gap-3 mb-4">

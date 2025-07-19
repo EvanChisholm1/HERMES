@@ -1,7 +1,10 @@
 import type React from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Zap } from "lucide-react";
+import { Zap, Settings } from "lucide-react";
+import { UserSettingsModal } from "@/components/UserSettings";
+import { UserSettings } from "@/types/types";
 
 interface MainHomepageProps {
   query: string;
@@ -11,6 +14,7 @@ interface MainHomepageProps {
   handleSuggestionClick: (suggestion: string) => void;
   isProcessing: boolean;
   handleKeyPress: (e: React.KeyboardEvent) => void;
+  onUserSettingsChange?: (settings: UserSettings) => void;
 }
 
 const suggestions = [
@@ -30,9 +34,24 @@ export function MainHomepage({
   handleSuggestionClick,
   isProcessing,
   handleKeyPress,
+  onUserSettingsChange,
 }: MainHomepageProps) {
+  const [showSettings, setShowSettings] = useState(false);
+  
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
+      {/* Settings Button */}
+      <div className="absolute top-4 right-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowSettings(true)}
+          className="text-gray-400 hover:text-white hover:bg-gray-800"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      </div>
+
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-2xl">
@@ -40,11 +59,8 @@ export function MainHomepage({
           <div className="text-center my-12">
             <h1 className="text-6xl font-light text-white mb-3">hermes</h1>
             <p className="text-lg text-gray-400 mb-2">
-              {/* AI agent that handles your calls */}
-              Tell me what you need done. I'll research, call, book, and update
-              you.
+              Tell me what you need done. I'll research, call, book, and update you.
             </p>
-            {/* <p className="text-sm text-gray-500"> */}
           </div>
 
           {/* Input box */}
@@ -123,6 +139,13 @@ export function MainHomepage({
           </a>
         </div>
       </footer>
+
+      {/* User Settings Modal */}
+      <UserSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onSettingsChange={onUserSettingsChange}
+      />
     </div>
   );
 }

@@ -20,3 +20,9 @@ export interface CallResult {
   nextSteps: string[];
   callDuration: string;
 }
+
+export interface UserSettings {
+  name: string;
+  phone: string;
+  address: string;
+}
