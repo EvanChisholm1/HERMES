@@ -65,8 +65,8 @@ async function createCall(number, prompt) {
       assistant: {
         model: {
           toolIds: ["1e3bbdb6-820a-4564-9b6c-b90dc2496bc3"],
-          provider: "openai",
-          model: "gpt-4o",
+          provider: "anthropic",
+          model: "claude-sonnet-4-20250514",
           messages: [
             {
               role: "system",
@@ -95,9 +95,55 @@ app.post("/call", async (req, res) => {
   res.status(200).send("Call created successfully");
 });
 
-app.post("/webhook", (req, res) => {
+app.post("/webhook", async (req, res) => {
   const event = req.body;
-  console.log("Webhook event received:", event);
+  console.log("Webhook event received:", JSON.stringify(event, null, 2));
+
+  // Handle tool calls - check both possible message locations
+  const message = event.message || event;
+  
+  if (message.type === "tool-calls" || (message.toolCallList && message.toolCallList.length > 0)) {
+    const toolCallList = message.toolCallList || [];
+    const results = [];
+
+    console.log("Tool calls found:", toolCallList);
+
+    for (const toolCall of toolCallList) {
+      console.log("Processing tool call:", toolCall);
+      
+      // Check for the tool name in different possible locations
+      const toolName = toolCall.name || toolCall.function?.name;
+      
+      if (toolName === "list_events") {
+        try {
+          // Import and use the Google Calendar functionality
+          const { authorize, listEvents } = await import("./get_events.js");
+          const auth = await authorize();
+          const events = await listEvents(auth);
+          
+          console.log("Calendar events retrieved:", events);
+
+          results.push({
+            toolCallId: toolCall.id,
+            result: events || "No upcoming events found.",
+          });
+        } catch (error) {
+          console.error("Error getting calendar events:", error);
+          results.push({
+            toolCallId: toolCall.id,
+            result:
+              "Sorry, I couldn't retrieve your calendar events right now.",
+          });
+        }
+      }
+    }
+
+    console.log("Returning tool call results:", results);
+
+    return res.json({ results });
+  }
+
+  res.status(200).send("ok");
 });
 
 // WebSocket server setup

@@ -60,15 +60,92 @@ async function listEvents(auth) {
   });
 
   const events = res.data.items;
+  console.log("Raw events from Google Calendar:", events);
+  
   if (!events || events.length === 0) {
-    console.log("No upcoming events found.");
+    return "No upcoming events found.";
   } else {
-    console.log("Upcoming events:");
-    events.forEach((event) => {
-      const start = event.start?.dateTime || event.start?.date;
-      console.log(`${start} - ${event.summary}`);
-    });
+    const eventList = events.map((event) => {
+      const isAllDay = !!event.start?.date && !event.start?.dateTime;
+      let eventDescription = '';
+      
+      if (isAllDay) {
+        // All-day event
+        const startDate = new Date(event.start.date + 'T00:00:00');
+        const endDate = event.end?.date ? new Date(event.end.date + 'T00:00:00') : null;
+        
+        const formattedStart = startDate.toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        // Check if it's a multi-day event
+        if (endDate && endDate.getTime() - startDate.getTime() > 86400000) {
+          endDate.setDate(endDate.getDate() - 1); // End date is exclusive in all-day events
+          const formattedEnd = endDate.toLocaleString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+          eventDescription = `${event.summary || 'No title'} - All day from ${formattedStart} to ${formattedEnd}`;
+        } else {
+          eventDescription = `${event.summary || 'No title'} - All day on ${formattedStart}`;
+        }
+      } else {
+        // Timed event
+        const startDate = new Date(event.start.dateTime);
+        const endDate = event.end?.dateTime ? new Date(event.end.dateTime) : null;
+        
+        const formattedStart = startDate.toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        if (endDate) {
+          const formattedEnd = endDate.toLocaleString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          });
+          
+          // If event spans multiple days, include the end date
+          if (startDate.toDateString() !== endDate.toDateString()) {
+            const formattedEndDate = endDate.toLocaleString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            eventDescription = `${event.summary || 'No title'} - ${formattedStart} to ${formattedEndDate}`;
+          } else {
+            eventDescription = `${event.summary || 'No title'} - ${formattedStart} to ${formattedEnd}`;
+          }
+        } else {
+          eventDescription = `${event.summary || 'No title'} - ${formattedStart}`;
+        }
+      }
+      
+      return eventDescription;
+    }).join('\n');
+    
+    const response = `You have ${events.length} upcoming events:\n${eventList}`;
+    console.log("Returning formatted response:", response);
+    return response;
   }
 }
 
-authorize().then(listEvents).catch(console.error);
+export { authorize, listEvents };
+
+// Only run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  authorize().then(listEvents).catch(console.error);
+}

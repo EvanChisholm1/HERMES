@@ -118,7 +118,7 @@ You are ${userName}'s personal assistant calling ${
     business.name
   }. Here's the context:
 
-USER'S REQUEST: "${userQuery}"
+${userName}'S REQUEST: "${userQuery}"
 BUSINESS: ${business.name}
 BUSINESS PHONE: ${business.phone}
 BUSINESS ADDRESS: ${business.address}
@@ -128,6 +128,9 @@ ${userAddress ? `USER'S ADDRESS: ${userAddress}` : ""}
 YOUR GOAL: Help ${userName} with their request by speaking to this business. Be specific about what ${userName} needs.
 
 IMPORTANT INSTRUCTIONS:
+- YOU ARE CURRENTLY ON THE PHONE WITH ${
+    business.name
+  } on BEHALF OF ${userName}, communicate ${userName}'s GOAL IMMEDIATELY.
 - Start by politely introducing yourself as ${userName}'s assistant
 - Clearly explain what ${userName} is looking for based on their request
 - ${userName}'s callback number is ${userPhone}
@@ -138,6 +141,7 @@ IMPORTANT INSTRUCTIONS:
 - DO NOT disclose any information unless asked directly
 
 - If they ask for ${userName}'s name, say "${userName}" but do not give out the phone number unless they ask for it directly.
+- You have access to the ${userName}'s google calendar, use this tool to check if certain times are okay for ${userName}. Before confirming any appointment ever consult the calendar.
 
 When the conversation starts, let them know you're calling about ${userName}'s request and what specifically you need help with.`;
 }
@@ -150,7 +154,13 @@ export async function makeCall(
   userAddress?: string
 ): Promise<void> {
   try {
-    const prompt = generateCallPrompt(userQuery, business, userName, userPhone, userAddress);
+    const prompt = generateCallPrompt(
+      userQuery,
+      business,
+      userName,
+      userPhone,
+      userAddress
+    );
 
     const response = await fetch(`${CALLING_SERVICE_URL}/call`, {
       method: "POST",
