@@ -9,13 +9,15 @@ interface ActiveCallProps {
   callDuration: number;
   callTranscript: string[];
   isMuted: boolean;
+  isCallConnected: boolean;
   showListenModal: boolean;
   setShowListenModal: (show: boolean) => void;
   setIsMuted: (muted: boolean) => void;
-  setIsOnCall: (onCall: boolean) => void;
+  endCall: () => void;
   formatDuration: (seconds: number) => string;
   listenToCall: () => void;
 }
+
 
 export function ActiveCall({
   currentBusiness,
@@ -23,10 +25,11 @@ export function ActiveCall({
   callDuration,
   callTranscript,
   isMuted,
+  isCallConnected,
   showListenModal,
   setShowListenModal,
   setIsMuted,
-  setIsOnCall,
+  endCall,
   formatDuration,
   listenToCall,
 }: ActiveCallProps) {
@@ -64,7 +67,7 @@ export function ActiveCall({
 
         {/* Call Status */}
         <div className="mb-8 p-6 bg-gray-900/50 border border-gray-800 rounded-lg">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-6 mb-4">
             <div className="relative">
               <PhoneCall className="h-8 w-8 text-green-400" />
               <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-400 rounded-full animate-pulse"></div>
@@ -74,6 +77,13 @@ export function ActiveCall({
                 Calling {currentBusiness.name}
               </h2>
               <p className="text-gray-400 text-sm">{currentBusiness.phone}</p>
+            </div>
+            <div
+            className={`px-4 py-2 rounded-md text-sm font-medium ${
+              isCallConnected ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`}
+            >
+              {isCallConnected ? 'Connected' : 'Not Connected'}
             </div>
           </div>
           <div className="text-gray-300 text-sm">
@@ -90,7 +100,7 @@ export function ActiveCall({
                 size="sm"
                 variant="ghost"
                 onClick={() => setIsMuted(!isMuted)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-gray-200"
               >
                 {isMuted ? (
                   <VolumeX className="h-4 w-4" />
@@ -115,6 +125,7 @@ export function ActiveCall({
             )}
           </div>
         </div>
+        
 
         {/* Call Controls */}
         <div className="flex justify-center gap-4">
@@ -122,17 +133,18 @@ export function ActiveCall({
             variant="ghost"
             className="px-6 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
             onClick={() => listenToCall()}
+            disabled={!isCallConnected} 
             // onClick={() => console.log("we here lol")}
           >
             Listen In
           </Button>
-          <Button
-            variant="destructive"
-            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg"
-            onClick={() => setIsOnCall(false)}
-          >
-            End Call
-          </Button>
+            {/* <Button
+              variant="destructive"
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+              onClick={endCall}
+            >
+              End Call
+            </Button> */}
         </div>
       </div>
     </div>

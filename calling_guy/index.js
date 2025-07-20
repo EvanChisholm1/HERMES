@@ -119,9 +119,18 @@ async function createCall(number, prompt, res) {
         });
       }
       console.log("call Data Status: ", callData.status);
+      
+      if (callData.status === 'ringing') { 
+        broadcast({ type: "ringing" });
+      } else if (callData.status === 'in-progress') {
+        broadcast({ type: "in-progress" });
+      }
+      
       // Check if the call has ended
       if (!callEnded && callData.status === 'ended') {
         callEnded = true;
+
+        broadcast({ type: 'call_ended'});
         
         if (callData.messages) { 
           const summary_response = await fetch(`${process.env.API_URL}/summary`, { 
@@ -132,10 +141,8 @@ async function createCall(number, prompt, res) {
             body: JSON.stringify({ messages: callData.messages })
           });
           const summary = await summary_response.json();
-          broadcast({ type: 'call_ended', summary: summary, messages: callData.messages.filter((msg) => msg.role !== "system") });
-        } else { 
-          broadcast({ type: 'call_ended'});
-        }
+          broadcast({ type: 'summary_ready', summary: summary, messages: callData.messages.filter((msg) => msg.role !== "system") });
+        } 
         clearInterval(polling); // stop polling
       }
   } catch (err) {
@@ -350,6 +357,30 @@ app.post("/vapi/webhook", (req, res) => {
   broadcastEvent(event); // emits via WebSocket
   res.status(200).send("ok");
 });
+
+app.post('/end-call/:callId', async (req, res) => {
+  const { callId } = req.params;
+
+  try {
+    const response = await fetch(`${VAPI_BASE_URL}/call/${callId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${process.env.VAPI_KEY}`, // Replace with your VAPI API key
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        status: 'ended'
+      })
+    });
+    console.log("Call ended successfully:", response);
+    broadcastEvent({ type: 'call_ended' });
+    res.status(200).json({ message: "Call ended successfully" });
+  } catch (error) {
+    console.error("Error ending call:", error);
+    res.status(500).json({ error: "Error ending call" });
+  }
+});
+
 
 // const ex = `
 // you are an ai agent that is making a phone call to ${recipient}

@@ -87,6 +87,7 @@ export default function HermesInterface() {
   const [callId, setCallId] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
   const [showListenModal, setShowListenModal] = useState(false);
+  const [isCallConnected, setIsCallConnected] = useState(false);
 
   const handleExecute = async () => {
     if (!query.trim()) return;
@@ -158,6 +159,7 @@ export default function HermesInterface() {
       setCallTranscript((prev) => [...prev, "Error: Failed to initiate call"]);
     }
   };
+  
   const listenToCall = (listenUrl : string) => {  
     if (!listenUrl) { 
       console.error("Listen URL is not set. Cannot listen to call.");
@@ -198,98 +200,7 @@ export default function HermesInterface() {
       player.feed(arrayBuffer);
     } else {
       console.warn("Unknown event data type:", typeof event.data);
-    }
-};
-    
-    // const audioQueue: any[] = [];
-
-    // socket.onerror = (error) => {
-    //   console.error('WebSocket error:', error);
-    // }
-
-    // socket.onmessage = (event) => {
-    //   if(typeof event.data === "object") {
-    //     event.data.arrayBuffer().then((buffer: any) => {
-    //       audioQueue.push(buffer);
-
-    //     }).catch((error: any) => {
-    //       console.error('Error processing audio data:', error);
-    //       setError("Failed to process audio data.");
-    //     })
-    //   }
-    // }
-
-    // const playAudio = () => {
-    //   if(audioQueue.length > 0) {
-    //     const buffer = audioQueue.shift();
-        
-    //     audioContext.decodeAudioData(buffer, (decodedData) =>  {
-    //       const source = audioContext.createBufferSource();
-    //       source.buffer = decodedData;
-    //       source.connect(audioContext.destination);
-    //       source.start(0);
-    //     }, (error) => {
-    //     console.error("Error decoding audio data:", error);
-    //   })
-
-    //   }
-    //   requestAnimationFrame(playAudio);
-    // }
-
-    // audioContext.onstatechange = () => {
-    //   if(audioContext.state === "running") {
-    //     playAudio();
-    //   }
-    // }
-    // socket.binaryType = 'arraybuffer';
-    // socket.onerror = (error) => {
-    //   console.error('WebSocket error:', error);
-    //   setError("Failed to connect to audio stream.");
-    // };
-    // // Replace with actual values from VAPI
-    // const SAMPLE_RATE = 16000; // or 8000, 44100, etc.
-    // const CHANNELS = 1;        // Mono or stereo
-    // const PCM_SAMPLE_SIZE = 16; // 16-bit PCM
-
-    // socket.onopen = () => {
-    //   console.log('WebSocket connection opened');
-    // };
-
-    // socket.onmessage = (event) => {
-    //   const arrayBuffer = event.data;
-    //   const int16Array = new Int16Array(arrayBuffer);
-    //   const float32Array = new Float32Array(int16Array.length);
-
-    //   // Convert PCM 16-bit signed int to float32 [-1.0, 1.0]
-    //   for (let i = 0; i < int16Array.length; i++) {
-    //     float32Array[i] = int16Array[i] / 32768;
-    //   }
-
-    //   // Create AudioBuffer (mono or stereo)
-    //   const audioBuffer = audioContext.createBuffer(
-    //     CHANNELS,
-    //     float32Array.length / CHANNELS,
-    //     SAMPLE_RATE
-    //   );
-
-    //   // Copy float32 PCM data into audio buffer channels
-    //   for (let channel = 0; channel < CHANNELS; channel++) {
-    //     const channelData = audioBuffer.getChannelData(channel);
-    //     for (let i = 0; i < channelData.length; i++) {
-    //       channelData[i] = float32Array[i * CHANNELS + channel];
-    //     }
-    //   }
-
-    //   // Play the audio
-    //   const source = audioContext.createBufferSource();
-    //   source.buffer = audioBuffer;
-    //   source.connect(audioContext.destination);
-    //   source.start();
-    // };
-
-    // socket.onclose = () => {
-    //   console.log('WebSocket connection closed');
-    // };
+    }};
   }
 
   const handleYoloMode = async () => {
@@ -370,10 +281,30 @@ export default function HermesInterface() {
           setCallTranscript((prev) => [...prev, data.text || ""]);
         }
 
+        if (data.type === 'ringing') { 
+          console.log("Call is ringing");
+          setCallTranscript((prev) => [...prev, "Call is ringing..."]);
+          setIsCallConnected(false);
+        } else if (data.type === 'in-progress') { 
+          // setCallTranscript((prev) => [...prev, `Call is in progress with ${currentBusiness?.name}`]);
+          setCallTranscript((prev) => {
+            const message = `Call is in progress with ${currentBusiness?.name}`;
+            if (!prev.includes(message)) {
+              return [...prev, message];
+            }
+            return prev;
+          });
+          setIsCallConnected(true);
+        }
+
         if (data.type === 'call_ended') { 
           console.log("Call ended"); 
           setCallTranscript((prev) => [...prev, "Call completed - processing results..."]);
-          setIsOnCall(false);
+          setIsCallConnected(false);
+        }
+
+        if (data.type === "summary_ready") {
+          setIsOnCall(false); 
           setCallResult(data.summary);
           setMessages(data.messages || []);
           setShowCallResults(true);
@@ -398,6 +329,21 @@ export default function HermesInterface() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const endCall = async () => { 
+    try { 
+      const response = await fetch(`${process.env.NEXT_PUBLIC_CALLING_SERVICE_URL}/end-call/${callId}`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) { 
+      console.error("Failed to end call:", error);
+      setError("Failed to end call. Please try again.");
+    }
+  }
+
   // Call Results Page
   if (showCallResults && callResult) {
     return (
@@ -413,11 +359,12 @@ export default function HermesInterface() {
         query={query}
         callDuration={callDuration}
         callTranscript={callTranscript}
+        isCallConnected={isCallConnected}
         isMuted={isMuted}
         showListenModal={showListenModal}
         setShowListenModal={setShowListenModal}
         setIsMuted={setIsMuted}
-        setIsOnCall={setIsOnCall}
+        endCall={endCall}
         formatDuration={formatDuration}
         listenToCall={() => listenToCall(listenUrl || "")}
       />
