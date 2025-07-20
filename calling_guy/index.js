@@ -65,12 +65,16 @@ async function createCall(number, prompt, res) {
     const call = await vapi.calls.create({
       phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // Replace with your phone number ID
       customer: { number: "+17056060865" },
-      // customer: { number: "+14375395360"}, 
+      // customer: { number: "+14375395360"},
       // customer: { number: cleanedNumber },
       assistant: {
         model: {
-          provider: "openai",
-          model: "gpt-4o",
+          toolIds: [
+            "1e3bbdb6-820a-4564-9b6c-b90dc2496bc3",
+            "517fb549-9f3f-48e2-96b7-382a0dbb34a4",
+          ],
+          provider: "anthropic",
+          model: "claude-sonnet-4-20250514",
           messages: [
             {
               role: "system",
@@ -78,7 +82,7 @@ async function createCall(number, prompt, res) {
             },
           ],
         },
-      }
+      },
     });
     console.log("Call ID: ", call.id);
     const polling = setInterval(() => pollCall(call.id, broadcastEvent), POLL_INTERVAL_MS);
@@ -158,6 +162,164 @@ app.post("/call", async (req, res) => {
   // res.status(200).send("Call created successfully");
 });
 
+app.post("/webhook", async (req, res) => {
+  const event = req.body;
+  console.log("Webhook event received:", JSON.stringify(event, null, 2));
+
+  // Handle tool calls - check both possible message locations
+  const message = event.message || event;
+
+  if (
+    message.type === "tool-calls" ||
+    (message.toolCallList && message.toolCallList.length > 0)
+  ) {
+    const toolCallList = message.toolCallList || [];
+    const results = [];
+
+    console.log("Tool calls found:", toolCallList);
+
+    for (const toolCall of toolCallList) {
+      console.log("Processing tool call:", toolCall);
+
+      // Check for the tool name in different possible locations
+      const toolName = toolCall.name || toolCall.function?.name;
+
+      if (toolName === "list_events") {
+        try {
+          // Import and use the Google Calendar functionality
+          const { authorize, listEvents } = await import("./get_events.js");
+          const auth = await authorize();
+          const events = await listEvents(auth);
+
+          console.log("Calendar events retrieved:", events);
+
+          results.push({
+            toolCallId: toolCall.id,
+            result: events || "No upcoming events found.",
+          });
+        } catch (error) {
+          console.error("Error getting calendar events:", error);
+          results.push({
+            toolCallId: toolCall.id,
+            result:
+              "Sorry, I couldn't retrieve your calendar events right now.",
+          });
+        }
+      } else if (toolName === "create_event") {
+        try {
+          // Import and use the Google Calendar functionality
+          const { authorize, createEvent } = await import("./get_events.js");
+          const auth = await authorize();
+
+          // Get event details from tool call arguments
+          const eventDetails = toolCall.arguments || toolCall.function?.arguments || {};
+          console.log("Creating event with details:", eventDetails);
+
+          const result = await createEvent(auth, eventDetails);
+          console.log("Event creation result:", result);
+
+          results.push({
+            toolCallId: toolCall.id,
+            result: result,
+          });
+        } catch (error) {
+          console.error("Error creating calendar event:", error);
+          results.push({
+            toolCallId: toolCall.id,
+            result:
+              "Sorry, I couldn't create the calendar event. Please check the event details and try again.",
+          });
+        }
+      }
+    }
+
+    console.log("Returning tool call results:", results);
+
+    return res.json({ results });
+  }
+
+  res.status(200).send("ok");
+});
+
+app.post("/webhook", async (req, res) => {
+  const event = req.body;
+  console.log("Webhook event received:", JSON.stringify(event, null, 2));
+
+  // Handle tool calls - check both possible message locations
+  const message = event.message || event;
+
+  if (
+    message.type === "tool-calls" ||
+    (message.toolCallList && message.toolCallList.length > 0)
+  ) {
+    const toolCallList = message.toolCallList || [];
+    const results = [];
+
+    console.log("Tool calls found:", toolCallList);
+
+    for (const toolCall of toolCallList) {
+      console.log("Processing tool call:", toolCall);
+
+      // Check for the tool name in different possible locations
+      const toolName = toolCall.name || toolCall.function?.name;
+
+      if (toolName === "list_events") {
+        try {
+          // Import and use the Google Calendar functionality
+          const { authorize, listEvents } = await import("./get_events.js");
+          const auth = await authorize();
+          const events = await listEvents(auth);
+
+          console.log("Calendar events retrieved:", events);
+
+          results.push({
+            toolCallId: toolCall.id,
+            result: events || "No upcoming events found.",
+          });
+        } catch (error) {
+          console.error("Error getting calendar events:", error);
+          results.push({
+            toolCallId: toolCall.id,
+            result:
+              "Sorry, I couldn't retrieve your calendar events right now.",
+          });
+        }
+      } else if (toolName === "create_event") {
+        try {
+          // Import and use the Google Calendar functionality
+          const { authorize, createEvent } = await import("./get_events.js");
+          const auth = await authorize();
+
+          // Get event details from tool call arguments
+          const eventDetails = toolCall.arguments || toolCall.function?.arguments || {};
+          console.log("Creating event with details:", eventDetails);
+
+          const result = await createEvent(auth, eventDetails);
+          console.log("Event creation result:", result);
+
+          results.push({
+            toolCallId: toolCall.id,
+            result: result,
+          });
+        } catch (error) {
+          console.error("Error creating calendar event:", error);
+          results.push({
+            toolCallId: toolCall.id,
+            result:
+              "Sorry, I couldn't create the calendar event. Please check the event details and try again.",
+          });
+        }
+      }
+    }
+
+    console.log("Returning tool call results:", results);
+
+    return res.json({ results });
+  }
+
+  res.status(200).send("ok");
+});
+
 // WebSocket server setup
 const server = app.listen(3001, () => {
   console.log("Server is running on port 3001");
@@ -182,11 +344,11 @@ function broadcastEvent(event) {
   }
 }
 
-app.post('/vapi/webhook', (req, res) => {
+app.post("/vapi/webhook", (req, res) => {
   const event = req.body;
   console.log("Received event: ", event);
   broadcastEvent(event); // emits via WebSocket
-  res.status(200).send('ok');
+  res.status(200).send("ok");
 });
 
 // const ex = `

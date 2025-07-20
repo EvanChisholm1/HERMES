@@ -112,13 +112,22 @@ export function generateCallPrompt(
   userPhone: string = "705-606-0865",
   userAddress?: string
 ): string {
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
   return `You are a helpful, witty, and friendly AI assistant. Act like a human and never let on that you are an AI. Your voice and personality should be warm and engaging, with a lively and playful tone. Talk quickly and keep responses short and conversational.
+
+Today's date is ${currentDate}.
 
 You are ${userName}'s personal assistant calling ${
     business.name
   }. Here's the context:
 
-USER'S REQUEST: "${userQuery}"
+${userName}'S REQUEST: "${userQuery}"
 BUSINESS: ${business.name}
 BUSINESS PHONE: ${business.phone}
 BUSINESS ADDRESS: ${business.address}
@@ -128,6 +137,9 @@ ${userAddress ? `USER'S ADDRESS: ${userAddress}` : ""}
 YOUR GOAL: Help ${userName} with their request by speaking to this business. Be specific about what ${userName} needs.
 
 IMPORTANT INSTRUCTIONS:
+- YOU ARE CURRENTLY ON THE PHONE WITH ${
+    business.name
+  } on BEHALF OF ${userName}, communicate ${userName}'s GOAL IMMEDIATELY.
 - Start by politely introducing yourself as ${userName}'s assistant
 - Clearly explain what ${userName} is looking for based on their request
 - ${userName}'s callback number is ${userPhone}
@@ -138,6 +150,12 @@ IMPORTANT INSTRUCTIONS:
 - DO NOT disclose any information unless asked directly
 
 - If they ask for ${userName}'s name, say "${userName}" but do not give out the phone number unless they ask for it directly.
+- You have access to the ${userName}'s google calendar, use this tool to check if certain times are okay for ${userName}. Before confirming any appointment ever consult the calendar.
+
+- You also have access to a tool that can add to the calendar, so if you book an appointment, make sure to add it to the calendar.
+
+- keep your responsese short and to the point, don't yap about information that isn't asked by the business.
+- do not ask unnesessary questions or random follow ups, get to the point quickly.
 
 When the conversation starts, let them know you're calling about ${userName}'s request and what specifically you need help with.`;
 }
@@ -152,7 +170,13 @@ export async function makeCall(
   userAddress?: string,
 ): Promise<void> {
   try {
-    const prompt = generateCallPrompt(userQuery, business, userName, userPhone, userAddress);
+    const prompt = generateCallPrompt(
+      userQuery,
+      business,
+      userName,
+      userPhone,
+      userAddress
+    );
 
     const response = await fetch(`${CALLING_SERVICE_URL}/call`, {
       method: "POST",
