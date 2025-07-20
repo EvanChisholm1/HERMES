@@ -8,7 +8,7 @@ import { pollCall } from "./poll_calls.js"; // Import the polling function
 config();
 
 const POLL_INTERVAL_MS = 3000;
-const VAPI_BASE_URL = 'https://api.vapi.ai'; // Or your VAPI base URL
+const VAPI_BASE_URL = "https://api.vapi.ai"; // Or your VAPI base URL
 
 const app = express();
 
@@ -64,9 +64,10 @@ async function createCall(number, prompt, res) {
   try {
     const call = await vapi.calls.create({
       phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // Replace with your phone number ID
-      customer: { number: "+17056060865" },
+      // customer: { number: "+17056060865" },
       // customer: { number: "+14375395360"},
-      // customer: { number: cleanedNumber },
+      // customer: { number: "+17058888117" },
+      customer: { number: cleanedNumber },
       assistant: {
         model: {
           toolIds: [
@@ -85,14 +86,17 @@ async function createCall(number, prompt, res) {
       },
     });
     console.log("Call ID: ", call.id);
-    const polling = setInterval(() => pollCall(call.id, broadcastEvent), POLL_INTERVAL_MS);
+    const polling = setInterval(
+      () => pollCall(call.id, broadcastEvent),
+      POLL_INTERVAL_MS
+    );
 
     let previousMessageTimes = new Set();
     let callEnded = false;
 
     res.status(200).json({
-        callId: call.id, 
-        listenUrl: call.monitor?.listenUrl || null,
+      callId: call.id,
+      listenUrl: call.monitor?.listenUrl || null,
     });
 
     async function pollCall(callId, broadcast) {
@@ -103,7 +107,7 @@ async function createCall(number, prompt, res) {
           },
         });
 
-      const callData = await response.json();
+        const callData = await response.json();
 
       if (!callData) { 
         return;
@@ -219,7 +223,8 @@ app.post("/webhook", async (req, res) => {
           const auth = await authorize();
 
           // Get event details from tool call arguments
-          const eventDetails = toolCall.arguments || toolCall.function?.arguments || {};
+          const eventDetails =
+            toolCall.arguments || toolCall.function?.arguments || {};
           console.log("Creating event with details:", eventDetails);
 
           const result = await createEvent(auth, eventDetails);
@@ -298,7 +303,8 @@ app.post("/webhook", async (req, res) => {
           const auth = await authorize();
 
           // Get event details from tool call arguments
-          const eventDetails = toolCall.arguments || toolCall.function?.arguments || {};
+          const eventDetails =
+            toolCall.arguments || toolCall.function?.arguments || {};
           console.log("Creating event with details:", eventDetails);
 
           const result = await createEvent(auth, eventDetails);

@@ -6,13 +6,18 @@ import { useState, useEffect } from "react";
 import { MainHomepage } from "@/components/MainHomepage";
 import { ResultsSelection } from "@/components/ResultsSelection";
 import { ActiveCall } from "@/components/ActiveCall";
-import { BusinessResult, CallResult, Message, UserSettings } from "@/types/types";
+import {
+  BusinessResult,
+  CallResult,
+  Message,
+  UserSettings,
+} from "@/types/types";
 import { CallResults } from "@/components/CallResults";
 import { searchPlaces, makeCall, generateCallPrompt } from "@/services/api";
 import { getUserSettings } from "@/utils/userSettings";
 import { useRef } from "react";
 import { buffer } from "stream/consumers";
-import PCMPlayer from 'pcm-player';
+import PCMPlayer from "pcm-player";
 
 const mockResults: BusinessResult[] = [
   {
@@ -82,7 +87,9 @@ export default function HermesInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [callResult, setCallResult] = useState<CallResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [userSettings, setUserSettings] = useState<UserSettings>(() => getUserSettings());
+  const [userSettings, setUserSettings] = useState<UserSettings>(() =>
+    getUserSettings()
+  );
   const wsRef = useRef<WebSocket | null>(null);
   const [callId, setCallId] = useState<string | null>(null);
   const [listenUrl, setListenUrl] = useState<string | null>(null);
@@ -102,14 +109,16 @@ export default function HermesInterface() {
       // Call the Flask API to search for places
       const searchResults = await searchPlaces(query);
       if (searchResults.length === 0) {
-        setError("No businesses found for your request. Please try a different search.");
+        setError(
+          "No businesses found for your request. Please try a different search."
+        );
         setResults(mockResults); // Show mock data as fallback
       } else {
         setResults(searchResults);
       }
       setShowResults(true);
     } catch (error) {
-      console.error('Search failed:', error);
+      console.error("Search failed:", error);
       setError("Unable to connect to search service. Showing sample results.");
       // Fallback to mock data if API fails
       setResults(mockResults);
@@ -136,11 +145,23 @@ export default function HermesInterface() {
     try {
       setCallTranscript(["Initiating call to " + business.name + "..."]);
       // Make the actual call using the calling service
-      await makeCall(business, query, setCallId, setListenUrl, userSettings.name, userSettings.phone, userSettings.address);
-      
+      await makeCall(
+        business,
+        query,
+        setCallId,
+        setListenUrl,
+        userSettings.name,
+        userSettings.phone,
+        userSettings.address
+      );
+
       // Update transcript to show call was initiated
-      setCallTranscript((prev) => [...prev, "Call initiated successfully", "AI agent is now speaking with " + business.name]);
-      
+      setCallTranscript((prev) => [
+        ...prev,
+        "Call initiated successfully",
+        "AI agent is now speaking with " + business.name,
+      ]);
+
       // Simulate some call progress for demo
       // const transcript = [
       //   "Agent is introducing themselves...",
@@ -154,14 +175,14 @@ export default function HermesInterface() {
       //   setCallTranscript((prev) => [...prev, transcript[i]]);
       // }
     } catch (error) {
-      console.error('Failed to initiate call:', error);
+      console.error("Failed to initiate call:", error);
       setError("Failed to initiate call. Please try again.");
       setCallTranscript((prev) => [...prev, "Error: Failed to initiate call"]);
     }
   };
   
-  const listenToCall = (listenUrl : string) => {  
-    if (!listenUrl) { 
+  const listenToCall = (listenUrl: string) => {
+    if (!listenUrl) {
       console.error("Listen URL is not set. Cannot listen to call.");
       setError("Listen URL is not available. Cannot listen to call.");
       return;
@@ -169,32 +190,33 @@ export default function HermesInterface() {
 
     console.log("Starting to listen to call", listenUrl);
     setShowListenModal(true);
-    const audioContext = new (window.AudioContext)();
+    const audioContext = new window.AudioContext();
     const socket = new WebSocket(listenUrl);
     socket.binaryType = "blob"; // default, but good to set explicitly
 
-  const player = new PCMPlayer({
-    inputCodec: 'Int16',
-    channels: 2,               // ✅ Match the server's channel count
-    sampleRate: 16000,
-    flushTime: 500,
-    fftSize: 512
-  });
+    const player = new PCMPlayer({
+      inputCodec: "Int16",
+      channels: 2, // ✅ Match the server's channel count
+      sampleRate: 16000,
+      flushTime: 500,
+      fftSize: 512,
+    });
 
-  socket.onmessage = async (event: MessageEvent<Blob | string>) => {
-    if (typeof event.data === "string") {
-      // Handle initial metadata JSON
-      const message = JSON.parse(event.data);
-      console.log("Received message:", message);
+    player.volume(1);
 
-      if (message.type === "start") {
-        // Optionally adjust player config based on message.encoding/channels
-        console.log("Audio stream starting...");
-      }
+    socket.onmessage = async (event: MessageEvent<Blob | string>) => {
+      if (typeof event.data === "string") {
+        // Handle initial metadata JSON
+        const message = JSON.parse(event.data);
+        console.log("Received message:", message);
 
-    } else if (event.data instanceof Blob) {
-      // Convert Blob to ArrayBuffer
-      const arrayBuffer = await event.data.arrayBuffer();
+        if (message.type === "start") {
+          // Optionally adjust player config based on message.encoding/channels
+          console.log("Audio stream starting...");
+        }
+      } else if (event.data instanceof Blob) {
+        // Convert Blob to ArrayBuffer
+        const arrayBuffer = await event.data.arrayBuffer();
 
       // Feed the raw PCM data to the player
       player.feed(arrayBuffer);
@@ -205,28 +227,26 @@ export default function HermesInterface() {
 
   const handleYoloMode = async () => {
     if (!query.trim()) return;
-    
+
     setIsProcessing(true);
     setError(null);
-    
+
     try {
       // Call the Flask API to search for places
       const searchResults = await searchPlaces(query);
+      console.log(searchResults);
+
       if (searchResults.length > 0) {
         handleExecuteCall(searchResults[0]);
       } else {
         setError("No businesses found for your request.");
-        // Fallback to mock data if no results
-        if (mockResults.length > 0) {
-          handleExecuteCall(mockResults[0]);
-        }
       }
     } catch (error) {
-      console.error('Search failed:', error);
+      console.error("Search failed:", error);
       setError("Unable to connect to search service. Using fallback option.");
       // Fallback to mock data if API fails
       if (mockResults.length > 0) {
-        handleExecuteCall(mockResults[0]);
+        // handleExecuteCall(mockResults[0]);
       }
     } finally {
       setIsProcessing(false);
@@ -277,7 +297,7 @@ export default function HermesInterface() {
       try {
         const data = JSON.parse(event.data);
         // if (data.type === "agent_spoke" || data.type === "user_spoke") {
-        if (data.type === "message") { 
+        if (data.type === "message") {
           setCallTranscript((prev) => [...prev, data.text || ""]);
         }
 
@@ -347,7 +367,11 @@ export default function HermesInterface() {
   // Call Results Page
   if (showCallResults && callResult) {
     return (
-      <CallResults callResult={callResult} handleNewTask={handleNewTask} messages={messages} />
+      <CallResults
+        callResult={callResult}
+        handleNewTask={handleNewTask}
+        messages={messages}
+      />
     );
   }
 

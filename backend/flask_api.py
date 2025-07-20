@@ -146,7 +146,7 @@ def search_places():
     search_query = data.get('goal', '')
 
     # context_data = fetch_user_context(request.json.get('session_id'))
-    results = openai_websearch_places(search_query, "Toronto", "Ontario", "CA")
+    results = openai_websearch_places(search_query, "Vancouver", "BC", "CA")
     if results: 
       return jsonify(results), 200
     return jsonify({"error": "No results found"}), 404
