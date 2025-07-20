@@ -36,17 +36,16 @@ client = OpenAI()
 
 def openai_websearch_places(search_query: str, city: str, province: str, country: str = "CA"): 
     completion = client.chat.completions.parse(
-        # model="gpt-4o-2024-08-06",
         model="gpt-4o-search-preview",
         messages=[{
             "role": "user", 
             "content": (
                 f"Search for businesses that match this request: {search_query} "
-                # "if the user provides a number to call, don't run a search, just return a list with one result that matches the number, don't run a web search. it doesn't need to be a business, could be a loved one or a friend. the name should be the person's name if provided, don't mention anything about a business or serivce in the reasoning, ratings and website should probably be null if not provided "
+                "if the user provides a number to call, don't run a search, just return a list with one result that matches the number, don't run a web search. it doesn't need to be a business, could be a loved one or a friend. the name should be the person's name if provided, don't mention anything about a business or serivce in the reasoning, ratings and website should probably be null if not provided "
                 f"in {city}, {province}, {country}. "
                 "Find real businesses with accurate contact information. "
                 "In agentReasoning, explain why each business was selected and how it matches the request."
-                # "In general keep the reasoning pretty short and concise."
+                "In general keep the reasoning pretty short and concise."
             )
         }],
         web_search_options={
