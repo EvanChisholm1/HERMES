@@ -9,9 +9,12 @@ interface ActiveCallProps {
   callDuration: number;
   callTranscript: string[];
   isMuted: boolean;
+  showListenModal: boolean;
+  setShowListenModal: (show: boolean) => void;
   setIsMuted: (muted: boolean) => void;
   setIsOnCall: (onCall: boolean) => void;
   formatDuration: (seconds: number) => string;
+  listenToCall: () => void;
 }
 
 export function ActiveCall({
@@ -20,12 +23,33 @@ export function ActiveCall({
   callDuration,
   callTranscript,
   isMuted,
+  showListenModal,
+  setShowListenModal,
   setIsMuted,
   setIsOnCall,
   formatDuration,
+  listenToCall,
 }: ActiveCallProps) {
   return (
     <div className="min-h-screen bg-gray-950">
+      {showListenModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full shadow-xl border border-gray-700">
+            <h2 className="text-xl text-white font-semibold mb-4">Listen In</h2>
+            <p className="text-gray-300 text-sm mb-6">
+              You are currently listening to this conversation.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowListenModal(false)}
+                className="px-4 py-2 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center gap-6 mb-10 pb-6 border-b border-gray-800">
@@ -97,6 +121,8 @@ export function ActiveCall({
           <Button
             variant="ghost"
             className="px-6 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+            onClick={() => listenToCall()}
+            // onClick={() => console.log("we here lol")}
           >
             Listen In
           </Button>

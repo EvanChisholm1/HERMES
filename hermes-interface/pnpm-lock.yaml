@@ -122,6 +122,9 @@ importers:
       next-themes:
         specifier: ^0.4.4
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      pcm-player:
+        specifier: ^0.0.18
+        version: 0.0.18
       react:
         specifier: ^19
         version: 19.1.0
@@ -1517,6 +1520,9 @@ packages:
   path-scurry@1.11.1:
     resolution: {integrity: sha512-Xa4Nw17FS9ApQFJ9umLiJS4orGjm7ZzwUrwamcGQuHSzDyth9boKDaycYdDcZDuqYATXw4HFXgaqWTctW/v1HA==}
     engines: {node: '>=16 || 14 >=14.18'}
+
+  pcm-player@0.0.18:
+    resolution: {integrity: sha512-kRamagzBRlcLORBlLxb4UADPwqyGOiGgkzhZsIwtMGS7n6Hlp7h44PaEL8TIybzSkyMcIvvsQjUCuphW+aeDkg==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -3159,6 +3165,8 @@ snapshots:
     dependencies:
       lru-cache: 10.4.3
       minipass: 7.1.2
+
+  pcm-player@0.0.18: {}
 
   picocolors@1.1.1: {}
 

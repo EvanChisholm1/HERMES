@@ -145,9 +145,11 @@ When the conversation starts, let them know you're calling about ${userName}'s r
 export async function makeCall(
   business: BusinessResult,
   userQuery: string,
+  setCallId: (callId: string) => void,
+  setListenUrl: (listenUrl: string) => void,
   userName?: string,
   userPhone?: string,
-  userAddress?: string
+  userAddress?: string,
 ): Promise<void> {
   try {
     const prompt = generateCallPrompt(userQuery, business, userName, userPhone, userAddress);
@@ -166,6 +168,11 @@ export async function makeCall(
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    setCallId(data.callId);
+    console.log("Listen url", data.listenUrl);
+    setListenUrl(data.listenUrl);
 
     console.log("Call initiated successfully");
   } catch (error) {

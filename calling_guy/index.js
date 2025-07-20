@@ -3,8 +3,13 @@ import cors from "cors";
 import { VapiClient } from "@vapi-ai/server-sdk";
 import { config } from "dotenv";
 import { WebSocketServer } from "ws";
+import { pollCall } from "./poll_calls.js"; // Import the polling function
 
 config();
+
+const POLL_INTERVAL_MS = 3000;
+const VAPI_BASE_URL = 'https://api.vapi.ai'; // Or your VAPI base URL
+
 const app = express();
 
 // Configure CORS
@@ -53,7 +58,7 @@ function cleanupPhoneNumber(numberString) {
   return "+" + digitsOnly;
 }
 
-async function createCall(number, prompt) {
+async function createCall(number, prompt, res) {
   const cleanedNumber = cleanupPhoneNumber(number);
   console.log(`calling ${cleanedNumber} with prompt: ${prompt}`);
   try {
@@ -75,9 +80,70 @@ async function createCall(number, prompt) {
         },
       }
     });
+    console.log("Call ID: ", call.id);
+    const polling = setInterval(() => pollCall(call.id, broadcastEvent), POLL_INTERVAL_MS);
+
+    let previousMessageTimes = new Set();
+    let callEnded = false;
+
+    res.status(200).json({
+        callId: call.id, 
+        listenUrl: call.monitor?.listenUrl || null,
+    });
+
+    async function pollCall(callId, broadcast) {
+      try {
+        const response = await fetch(`${VAPI_BASE_URL}/call/${callId}`, {
+          headers: {
+            Authorization: `Bearer ${process.env.VAPI_KEY}`, // Replace with your VAPI API key
+          },
+        });
+
+      const callData = await response.json();
+
+      if (!callData) { 
+        return;
+      }
+      
+      console.log("call data", callData);
+      // Check for new messages
+      if (callData.messages && Array.isArray(callData.messages)) {
+        const newMessages = callData.messages.filter(msg => !previousMessageTimes.has(msg.time) && msg.role !== "system");
+        newMessages.forEach((msg) => {
+          previousMessageTimes.add(msg.time);
+          broadcast({ type: 'message', text: msg.message });
+        });
+      }
+      console.log("call Data Status: ", callData.status);
+      // Check if the call has ended
+      if (!callEnded && callData.status === 'ended') {
+        callEnded = true;
+        
+        if (callData.messages) { 
+          const summary_response = await fetch(`${process.env.API_URL}/summary`, { 
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ messages: callData.messages })
+          });
+          const summary = await summary_response.json();
+          broadcast({ type: 'call_ended', summary: summary, messages: callData.messages.filter((msg) => msg.role !== "system") });
+        } else { 
+          broadcast({ type: 'call_ended'});
+        }
+        clearInterval(polling); // stop polling
+      }
+  } catch (err) {
+    console.error("Polling error:", err.response?.data || err.message);
+    broadcast({ type: 'call_ended' });
+    clearInterval(polling);
+  }
+}
   } catch (error) {
     console.error("Error creating call:", error);
-    throw error; // Re-throw the error to handle it in the route
+    res.status(500).json({ error: "Error polling call data" });
+    // throw error; // Re-throw the error to handle it in the route
   }
   // call.
 }
@@ -88,8 +154,8 @@ app.post("/call", async (req, res) => {
 
   console.log(cleanupPhoneNumber(number));
 
-  await createCall(cleanupPhoneNumber(number), prompt);
-  res.status(200).send("Call created successfully");
+  await createCall(cleanupPhoneNumber(number), prompt, res);
+  // res.status(200).send("Call created successfully");
 });
 
 // WebSocket server setup
@@ -110,7 +176,7 @@ wss.on("connection", (ws) => {
 function broadcastEvent(event) {
   const data = JSON.stringify(event);
   for (const ws of clients) {
-    if (ws.readyState === ws.OPEN) {
+    if (ws.readyState === WebSocket.OPEN) {
       ws.send(data);
     }
   }
@@ -118,6 +184,7 @@ function broadcastEvent(event) {
 
 app.post('/vapi/webhook', (req, res) => {
   const event = req.body;
+  console.log("Received event: ", event);
   broadcastEvent(event); // emits via WebSocket
   res.status(200).send('ok');
 });

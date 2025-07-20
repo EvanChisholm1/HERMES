@@ -1,14 +1,19 @@
 import type React from "react";
+import { MessageCircle } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Phone, Clock, CheckCircle, ArrowRight } from "lucide-react";
-import { BusinessResult, CallResult } from "@/types/types";
+import { BusinessResult, CallResult, Message } from "@/types/types";
 
 interface CallResultsProps {
   callResult: CallResult;
+  messages: Message[];
   handleNewTask: () => void;
 }
 
-export function CallResults({ callResult, handleNewTask }: CallResultsProps) {
+export function CallResults({ callResult, messages, handleNewTask }: CallResultsProps) {
+  const [showChat, setShowChat] = useState(false);
+  
   return (
     <div className="min-h-screen bg-gray-950">
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -34,10 +39,12 @@ export function CallResults({ callResult, handleNewTask }: CallResultsProps) {
               <h2 className="text-xl font-medium text-white mb-2">
                 Task Completed Successfully
               </h2>
+
               <p className="text-gray-300 text-sm leading-relaxed mb-4">
                 {callResult.summary}
               </p>
-              <div className="flex items-center gap-6 text-sm text-gray-400">
+
+              <div className="flex items-center gap-6 text-sm text-gray-400 mb-4">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   <span>Called {callResult.business.name}</span>
@@ -47,6 +54,37 @@ export function CallResults({ callResult, handleNewTask }: CallResultsProps) {
                   <span>Duration: {callResult.callDuration}</span>
                 </div>
               </div>
+
+              <button
+                onClick={() => setShowChat(!showChat)}
+                className="text-sm text-blue-400 hover:underline flex items-center gap-1"
+              >
+                <MessageCircle className="w-4 h-4" />
+                {showChat ? 'Hide Transcript' : 'View Transcript'}
+              </button>
+
+              {showChat && (
+                <div className="mt-4 space-y-2 bg-gray-800 p-4 rounded-lg max-h-64 overflow-y-auto">
+                  {messages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${
+                        msg?.role === 'user' ? 'justify-start' : 'justify-end'
+                      }`}
+                    >
+                      <div
+                        className={`px-3 py-2 rounded-lg text-sm max-w-xs ${
+                          msg?.role === 'user'
+                            ? 'bg-gray-700 text-white'
+                            : 'bg-blue-600 text-white'
+                        }`}
+                      >
+                        {msg?.message}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -84,7 +122,7 @@ export function CallResults({ callResult, handleNewTask }: CallResultsProps) {
         <div className="mb-8 p-6 bg-gray-900/30 border border-gray-800 rounded-lg">
           <h3 className="text-lg font-medium text-white mb-4">Call Summary</h3>
           <div className="space-y-2">
-            {callResult.details.map((detail, index) => (
+            {callResult.details?.map((detail, index) => (
               <div key={index} className="flex items-start gap-3 text-sm">
                 <ArrowRight className="h-3 w-3 text-gray-500 mt-1 flex-shrink-0" />
                 <span className="text-gray-300">{detail}</span>

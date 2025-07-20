@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from research.research_agent import openai_websearch_places
+from research.research_agent import openai_websearch_places, summarize_call
 import uuid
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -152,6 +152,27 @@ def search_places():
     return jsonify({"error": "No results found"}), 404
   except Exception as e:
     return jsonify({"error": str(e)}), 500
+  
+@app.route('/summary', methods=['POST'])
+def summarize():
+  try: 
+    data = request.get_json()
+    if not data:
+      return jsonify({"error": "No message data provided"}), 400
+    
+    messages = data.get('messages', [])
+    if not messages:
+      return jsonify({"error": "No messages provided"}), 400
+    
+    summarized_results = summarize_call(messages)
+
+    if summarized_results: 
+      return jsonify(summarized_results), 200
+    return jsonify({"error": "No summary generated"}), 404
+  except Exception as e:
+    return jsonify({"error": str(e)}), 500
+    
+
 
 if __name__ == '__main__':
     app.run(debug=True)

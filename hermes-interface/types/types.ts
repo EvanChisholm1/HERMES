@@ -21,6 +21,16 @@ export interface CallResult {
   callDuration: string;
 }
 
+export interface Message { 
+  role: string, 
+  time: number, 
+  source: string, 
+  endTime: number, 
+  message: string, 
+  duration: number, 
+  secondsFromStart: number
+}
+
 export interface UserSettings {
   name: string;
   phone: string;

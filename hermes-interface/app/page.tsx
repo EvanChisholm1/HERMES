@@ -6,11 +6,13 @@ import { useState, useEffect } from "react";
 import { MainHomepage } from "@/components/MainHomepage";
 import { ResultsSelection } from "@/components/ResultsSelection";
 import { ActiveCall } from "@/components/ActiveCall";
-import { BusinessResult, CallResult, UserSettings } from "@/types/types";
+import { BusinessResult, CallResult, Message, UserSettings } from "@/types/types";
 import { CallResults } from "@/components/CallResults";
-import { searchPlaces, makeCall } from "@/services/api";
+import { searchPlaces, makeCall, generateCallPrompt } from "@/services/api";
 import { getUserSettings } from "@/utils/userSettings";
 import { useRef } from "react";
+import { buffer } from "stream/consumers";
+import PCMPlayer from 'pcm-player';
 
 const mockResults: BusinessResult[] = [
   {
@@ -77,10 +79,14 @@ export default function HermesInterface() {
   const [callTranscript, setCallTranscript] = useState<string[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [showCallResults, setShowCallResults] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [callResult, setCallResult] = useState<CallResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings>(() => getUserSettings());
   const wsRef = useRef<WebSocket | null>(null);
+  const [callId, setCallId] = useState<string | null>(null);
+  const [listenUrl, setListenUrl] = useState<string | null>(null);
+  const [showListenModal, setShowListenModal] = useState(false);
 
   const handleExecute = async () => {
     if (!query.trim()) return;
@@ -88,6 +94,8 @@ export default function HermesInterface() {
     setIsProcessing(true);
     setShowResults(false);
     setError(null);
+    setCallId(null);
+    setListenUrl(null);
 
     try {
       // Call the Flask API to search for places
@@ -121,13 +129,13 @@ export default function HermesInterface() {
     setCallDuration(0);
     setCallTranscript([]);
     setError(null);
+    setCallId(null);
+    setListenUrl(null);
 
     try {
-      // Add initial status
       setCallTranscript(["Initiating call to " + business.name + "..."]);
-      
       // Make the actual call using the calling service
-      await makeCall(business, query, userSettings.name, userSettings.phone, userSettings.address);
+      await makeCall(business, query, setCallId, setListenUrl, userSettings.name, userSettings.phone, userSettings.address);
       
       // Update transcript to show call was initiated
       setCallTranscript((prev) => [...prev, "Call initiated successfully", "AI agent is now speaking with " + business.name]);
@@ -148,15 +156,141 @@ export default function HermesInterface() {
       console.error('Failed to initiate call:', error);
       setError("Failed to initiate call. Please try again.");
       setCallTranscript((prev) => [...prev, "Error: Failed to initiate call"]);
-      
-      // Fall back to mock behavior
-      setTimeout(() => {
-        setIsOnCall(false);
-        setCallResult(mockCallResult);
-        setShowCallResults(true);
-      }, 2000);
     }
   };
+  const listenToCall = (listenUrl : string) => {  
+    if (!listenUrl) { 
+      console.error("Listen URL is not set. Cannot listen to call.");
+      setError("Listen URL is not available. Cannot listen to call.");
+      return;
+    }
+
+    console.log("Starting to listen to call", listenUrl);
+    setShowListenModal(true);
+    const audioContext = new (window.AudioContext)();
+    const socket = new WebSocket(listenUrl);
+    socket.binaryType = "blob"; // default, but good to set explicitly
+
+  const player = new PCMPlayer({
+    inputCodec: 'Int16',
+    channels: 2,               // ✅ Match the server's channel count
+    sampleRate: 16000,
+    flushTime: 500,
+    fftSize: 512
+  });
+
+  socket.onmessage = async (event: MessageEvent<Blob | string>) => {
+    if (typeof event.data === "string") {
+      // Handle initial metadata JSON
+      const message = JSON.parse(event.data);
+      console.log("Received message:", message);
+
+      if (message.type === "start") {
+        // Optionally adjust player config based on message.encoding/channels
+        console.log("Audio stream starting...");
+      }
+
+    } else if (event.data instanceof Blob) {
+      // Convert Blob to ArrayBuffer
+      const arrayBuffer = await event.data.arrayBuffer();
+
+      // Feed the raw PCM data to the player
+      player.feed(arrayBuffer);
+    } else {
+      console.warn("Unknown event data type:", typeof event.data);
+    }
+};
+    
+    // const audioQueue: any[] = [];
+
+    // socket.onerror = (error) => {
+    //   console.error('WebSocket error:', error);
+    // }
+
+    // socket.onmessage = (event) => {
+    //   if(typeof event.data === "object") {
+    //     event.data.arrayBuffer().then((buffer: any) => {
+    //       audioQueue.push(buffer);
+
+    //     }).catch((error: any) => {
+    //       console.error('Error processing audio data:', error);
+    //       setError("Failed to process audio data.");
+    //     })
+    //   }
+    // }
+
+    // const playAudio = () => {
+    //   if(audioQueue.length > 0) {
+    //     const buffer = audioQueue.shift();
+        
+    //     audioContext.decodeAudioData(buffer, (decodedData) =>  {
+    //       const source = audioContext.createBufferSource();
+    //       source.buffer = decodedData;
+    //       source.connect(audioContext.destination);
+    //       source.start(0);
+    //     }, (error) => {
+    //     console.error("Error decoding audio data:", error);
+    //   })
+
+    //   }
+    //   requestAnimationFrame(playAudio);
+    // }
+
+    // audioContext.onstatechange = () => {
+    //   if(audioContext.state === "running") {
+    //     playAudio();
+    //   }
+    // }
+    // socket.binaryType = 'arraybuffer';
+    // socket.onerror = (error) => {
+    //   console.error('WebSocket error:', error);
+    //   setError("Failed to connect to audio stream.");
+    // };
+    // // Replace with actual values from VAPI
+    // const SAMPLE_RATE = 16000; // or 8000, 44100, etc.
+    // const CHANNELS = 1;        // Mono or stereo
+    // const PCM_SAMPLE_SIZE = 16; // 16-bit PCM
+
+    // socket.onopen = () => {
+    //   console.log('WebSocket connection opened');
+    // };
+
+    // socket.onmessage = (event) => {
+    //   const arrayBuffer = event.data;
+    //   const int16Array = new Int16Array(arrayBuffer);
+    //   const float32Array = new Float32Array(int16Array.length);
+
+    //   // Convert PCM 16-bit signed int to float32 [-1.0, 1.0]
+    //   for (let i = 0; i < int16Array.length; i++) {
+    //     float32Array[i] = int16Array[i] / 32768;
+    //   }
+
+    //   // Create AudioBuffer (mono or stereo)
+    //   const audioBuffer = audioContext.createBuffer(
+    //     CHANNELS,
+    //     float32Array.length / CHANNELS,
+    //     SAMPLE_RATE
+    //   );
+
+    //   // Copy float32 PCM data into audio buffer channels
+    //   for (let channel = 0; channel < CHANNELS; channel++) {
+    //     const channelData = audioBuffer.getChannelData(channel);
+    //     for (let i = 0; i < channelData.length; i++) {
+    //       channelData[i] = float32Array[i * CHANNELS + channel];
+    //     }
+    //   }
+
+    //   // Play the audio
+    //   const source = audioContext.createBufferSource();
+    //   source.buffer = audioBuffer;
+    //   source.connect(audioContext.destination);
+    //   source.start();
+    // };
+
+    // socket.onclose = () => {
+    //   console.log('WebSocket connection closed');
+    // };
+  }
 
   const handleYoloMode = async () => {
     if (!query.trim()) return;
@@ -201,6 +335,7 @@ export default function HermesInterface() {
     setQuery("");
     setResults([]);
     setCallResult(null);
+    setMessages([]);
     setCurrentBusiness(null);
     setError(null);
   };
@@ -230,15 +365,17 @@ export default function HermesInterface() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "agent_spoke" || data.type === "user_spoke") {
-          setCallTranscript((prev) => [...prev, data.text || JSON.stringify(data)]);
+        // if (data.type === "agent_spoke" || data.type === "user_spoke") {
+        if (data.type === "message") { 
+          setCallTranscript((prev) => [...prev, data.text || ""]);
         }
 
         if (data.type === 'call_ended') { 
           console.log("Call ended"); 
           setCallTranscript((prev) => [...prev, "Call completed - processing results..."]);
           setIsOnCall(false);
-          setCallResult(mockCallResult);
+          setCallResult(data.summary);
+          setMessages(data.messages || []);
           setShowCallResults(true);
         }
       } catch (e) {
@@ -264,7 +401,7 @@ export default function HermesInterface() {
   // Call Results Page
   if (showCallResults && callResult) {
     return (
-      <CallResults callResult={callResult} handleNewTask={handleNewTask} />
+      <CallResults callResult={callResult} handleNewTask={handleNewTask} messages={messages} />
     );
   }
 
@@ -277,9 +414,12 @@ export default function HermesInterface() {
         callDuration={callDuration}
         callTranscript={callTranscript}
         isMuted={isMuted}
+        showListenModal={showListenModal}
+        setShowListenModal={setShowListenModal}
         setIsMuted={setIsMuted}
         setIsOnCall={setIsOnCall}
         formatDuration={formatDuration}
+        listenToCall={() => listenToCall(listenUrl || "")}
       />
     );
   }
