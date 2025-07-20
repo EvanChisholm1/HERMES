@@ -93,7 +93,7 @@ export function CallResults({ callResult, messages, handleNewTask }: CallResults
         {callResult.appointmentDetails && (
           <div className="mb-8 p-6 bg-gray-900/30 border border-gray-800 rounded-lg">
             <h3 className="text-lg font-medium text-white mb-4">
-              Delivery Details
+              Appointment Details
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -111,7 +111,7 @@ export function CallResults({ callResult, messages, handleNewTask }: CallResults
               <div>
                 <div className="text-xs text-gray-500 mb-1">CONFIRMATION</div>
                 <div className="text-gray-300 font-mono">
-                  {callResult.appointmentDetails.confirmationNumber}
+                  {callResult.appointmentDetails.confirmationNumber || "N/A"}
                 </div>
               </div>
             </div>
