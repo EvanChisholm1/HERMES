@@ -7,6 +7,9 @@ const USE_MOCK_SEARCH = process.env.NEXT_PUBLIC_USE_MOCK_SEARCH === "true";
 
 export interface SearchRequest {
   goal: string;
+  city?: string;
+  province?: string;
+  country?: string;
 }
 
 export interface SearchResponse {
@@ -48,25 +51,25 @@ const mockSearchResults: BusinessResult[] = [
   },
 ];
 
-export async function searchPlaces(query: string): Promise<BusinessResult[]> {
+export async function searchPlaces(query: string, city: string, province: string, country: string): Promise<BusinessResult[]> {
   // Use mock data if the flag is set (for testing without API costs)
-  if (USE_MOCK_SEARCH) {
-    console.log("🔄 Using mock search data for:", query);
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  // if (USE_MOCK_SEARCH) {
+  //   console.log("🔄 Using mock search data for:", query);
+  //   // Simulate network delay
+  //   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Filter mock results based on query for more realistic behavior
-    const filteredResults = mockSearchResults.filter(
-      (business) =>
-        business.name.toLowerCase().includes(query.toLowerCase()) ||
-        business.agentReasoning.toLowerCase().includes(query.toLowerCase()) ||
-        query.toLowerCase().includes("pizza") ||
-        query.toLowerCase().includes("food") ||
-        query.toLowerCase().includes("delivery")
-    );
+  //   // Filter mock results based on query for more realistic behavior
+  //   const filteredResults = mockSearchResults.filter(
+  //     (business) =>
+  //       business.name.toLowerCase().includes(query.toLowerCase()) ||
+  //       business.agentReasoning.toLowerCase().includes(query.toLowerCase()) ||
+  //       query.toLowerCase().includes("pizza") ||
+  //       query.toLowerCase().includes("food") ||
+  //       query.toLowerCase().includes("delivery")
+  //   );
 
-    return filteredResults.length > 0 ? filteredResults : mockSearchResults;
-  }
+  //   return filteredResults.length > 0 ? filteredResults : mockSearchResults;
+  // }
 
   try {
     console.log("🌐 Using real API search for:", query);
@@ -77,6 +80,9 @@ export async function searchPlaces(query: string): Promise<BusinessResult[]> {
       },
       body: JSON.stringify({
         goal: query,
+        city: city,
+        province: province,
+        country: country,
       }),
     });
 

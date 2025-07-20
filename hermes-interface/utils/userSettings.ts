@@ -5,7 +5,10 @@ const USER_SETTINGS_KEY = 'hermes_user_settings';
 const defaultSettings: UserSettings = {
   name: 'Evan',
   phone: '705-606-0865',
-  address: '123 Your Street, Your City',
+  address: '123 Yonge Street, Toronto',
+  city: 'Toronto', 
+  province: 'ON', 
+  country: "CA"
 };
 
 export function getUserSettings(): UserSettings {
@@ -22,6 +25,9 @@ export function getUserSettings(): UserSettings {
         name: parsed.name || defaultSettings.name,
         phone: parsed.phone || defaultSettings.phone,
         address: parsed.address || defaultSettings.address,
+        city: parsed.city || defaultSettings.city,
+        province: parsed.province || defaultSettings.province,
+        country: parsed.country || defaultSettings.country
       };
     }
   } catch (error) {

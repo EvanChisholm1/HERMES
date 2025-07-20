@@ -16,6 +16,9 @@ export function UserSettingsModal({ isOpen, onClose, onSettingsChange }: UserSet
     name: '',
     phone: '',
     address: '',
+    city: '',
+    province: '',
+    country: ''
   });
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -62,7 +65,7 @@ export function UserSettingsModal({ isOpen, onClose, onSettingsChange }: UserSet
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-md w-full p-6">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg max-w-md w-full h-[90vh] overflow-y-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-medium text-white">User Settings</h2>
@@ -119,6 +122,50 @@ export function UserSettingsModal({ isOpen, onClose, onSettingsChange }: UserSet
               onChange={(e) => handleChange('address', e.target.value)}
               placeholder="Enter your address"
               rows={2}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-start gap-4">
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <MapPin className="h-4 w-4" />
+              City
+            </label>
+            <textarea
+              value={settings.city}
+              onChange={(e) => handleChange('city', e.target.value)}
+              placeholder="City"
+              rows={1}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 resize-none"
+            />
+          </div>
+
+          <div>      
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <MapPin className="h-4 w-4" />
+              Province
+            </label>
+            <textarea
+              value={settings.province}
+              onChange={(e) => handleChange('province', e.target.value)}
+              placeholder="Province"
+              rows={1}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+              <MapPin className="h-4 w-4" />
+              Country
+            </label>
+            <textarea
+              value={settings.country}
+              onChange={(e) => handleChange('country', e.target.value)}
+              placeholder="Country"
+              rows={1}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:ring-1 focus:ring-gray-500 focus:border-gray-500 resize-none"
             />
           </div>

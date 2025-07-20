@@ -107,12 +107,13 @@ export default function HermesInterface() {
 
     try {
       // Call the Flask API to search for places
-      const searchResults = await searchPlaces(query);
+      const searchResults = 
+        await searchPlaces(query, userSettings.city, userSettings.province, userSettings.country);
       if (searchResults.length === 0) {
         setError(
           "No businesses found for your request. Please try a different search."
         );
-        setResults(mockResults); // Show mock data as fallback
+        setResults([]); // Show mock data as fallback
       } else {
         setResults(searchResults);
       }
@@ -121,7 +122,7 @@ export default function HermesInterface() {
       console.error("Search failed:", error);
       setError("Unable to connect to search service. Showing sample results.");
       // Fallback to mock data if API fails
-      setResults(mockResults);
+      setResults([]);
       setShowResults(true);
     } finally {
       setIsProcessing(false);
@@ -233,7 +234,8 @@ export default function HermesInterface() {
 
     try {
       // Call the Flask API to search for places
-      const searchResults = await searchPlaces(query);
+      const searchResults = 
+        await searchPlaces(query, userSettings.city, userSettings.province, userSettings.country);
       console.log(searchResults);
 
       if (searchResults.length > 0) {

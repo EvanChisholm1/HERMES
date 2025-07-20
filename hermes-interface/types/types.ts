@@ -35,4 +35,7 @@ export interface UserSettings {
   name: string;
   phone: string;
   address: string;
+  city: string;
+  province: string;
+  country: string;
 }
